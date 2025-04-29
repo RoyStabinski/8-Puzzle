@@ -2,18 +2,121 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>8-Puzzle Solver</title>
-  <!-- PyScript CSS & JS -->
+  <title>8-Puzzle Solver (Web)</title>
+  <style>
+    /* 3×3 grid and basic tile styling */
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 5px;
+      margin-bottom: 10px;
+    }
+    .tile {
+      width: 100px; height: 100px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2em; background: #eee;
+      cursor: pointer;
+      user-select: none;
+    }
+    .empty {
+      background: #fff;
+      cursor: default;
+    }
+    button { margin-right: 5px; }
+  </style>
+
+  <!-- PyScript dependencies -->
   <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
   <script defer src="https://pyscript.net/latest/pyscript.js"></script>
 </head>
 <body>
-  <h1>8-Puzzle Solver</h1>
 
-  <!-- Load core logic -->
+  <h1>8-Puzzle Solver</h1>
+  <div id="grid"></div>
+  <button id="shuffle">Shuffle</button>
+  <button id="solve-bfs">Solve BFS</button>
+  <button id="solve-astar">Solve A*</button>
+
+  <!-- load your solver -->
   <py-script src="Tiles.py"></py-script>
-  <!-- Then your GUI -->
-  <py-script src="PuzzleGUI.py"></py-script>
+
+  <!-- glue code for UI + PyScript -->
+  <py-script>
+from Tiles import Tiles
+from pyscript import Element
+import random
+from js import setTimeout, alert
+
+# flat list 0–8, 0 is the empty
+state = list(range(1, 9)) + [0]
+tiles = Tiles(state)
+
+def render():
+    grid = Element("grid")
+    grid.element.innerHTML = ""
+    for i, v in enumerate(state):
+        d = Element().create("div")
+        d.element.className = "tile" + (" empty" if v == 0 else "")
+        d.element.textContent = "" if v == 0 else str(v)
+        if v != 0:
+            d.element.onclick = lambda ev, idx=i: try_move(idx)
+        grid.element.appendChild(d.element)
+
+def try_move(idx):
+    empty = state.index(0)
+    if idx in tiles.moves_states[empty]:
+        state[empty], state[idx] = state[idx], state[empty]
+        tiles = Tiles(state)  # update legal moves
+        render()
+        if state == tiles.end_state:
+            alert("🎉 Solved!")
+
+def shuffle_board(evt=None):
+    global tiles
+    for _ in range(50):
+        empty = state.index(0)
+        cands = [j for j in (empty-3, empty+3, empty-1, empty+1)
+                 if 0 <= j < 9
+                 and not (empty%3==0 and j==empty-1)
+                 and not (empty%3==2 and j==empty+1)]
+        swap = random.choice(cands)
+        state[empty], state[swap] = state[swap], state[empty]
+    tiles = Tiles(state)
+    render()
+
+def solve(algorithm):
+    global tiles, state
+    # freeze UI
+    for b in ["shuffle","solve-bfs","solve-astar"]:
+        Element(b).element.disabled = True
+
+    tiles = Tiles(state)
+    nodes, path = algorithm()
+    if nodes == -1:
+        alert("No solution found.")
+    else:
+        def step(i=0):
+            if i >= len(path):
+                for b in ["shuffle","solve-bfs","solve-astar"]:
+                    Element(b).element.disabled = False
+                return
+            mv = path[i]
+            em = state.index(0)
+            delta = {"Up":+3,"Down":-3,"Left":+1,"Right":-1}[mv]
+            state[em], state[em+delta] = state[em+delta], state[em]
+            render()
+            setTimeout(lambda: step(i+1), 300)
+
+        step()
+
+# wire buttons
+Element("shuffle").element.onclick      = shuffle_board
+Element("solve-bfs").element.onclick    = lambda e: solve(tiles.bfs)
+Element("solve-astar").element.onclick  = lambda e: solve(tiles.a_star)
+
+# initial
+render()
+  </py-script>
+
 </body>
 </html>
