@@ -1,295 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>8-Puzzle Solver</title>
-  <!-- Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <!-- PyScript -->
-  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>8 Puzzle</title>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+        }
 
-  <style>
-    /* Reset & base */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Roboto', sans-serif;
-      background: #f4f7fa;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      padding: 40px 20px;
-      color: #333;
-    }
+        .container {
+            text-align: center;
+            padding: 40px 20px;
+        }
 
-    /* Card container */
-    .card {
-      background: #fff;
-      padding: 20px 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      max-width: 360px;
-      width: 100%;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      font-weight: 700;
-      font-size: 1.8em;
-      color: #1a237e;
-    }
+        .title {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
 
-    /* Grid */
-    #grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-gap: 8px;
-      margin-bottom: 20px;
-    }
-    .tile {
-      aspect-ratio: 1/1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5em;
-      font-weight: 500;
-      background: #e3f2fd;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      cursor: pointer;
-      user-select: none;
-      transition: transform 0.1s, background 0.2s;
-    }
-    .tile:hover {
-      transform: translateY(-2px);
-      background: #bbdefb;
-    }
-    .empty {
-      background: transparent;
-      box-shadow: none;
-      cursor: default;
-    }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 0 auto;
+        }
 
-    /* Controls */
-    #controls {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    #controls button {
-      flex: 1 1 45%;
-      padding: 10px 12px;
-      font-size: 0.9em;
-      font-weight: 500;
-      border: none;
-      border-radius: 6px;
-      background: #1e88e5;
-      color: #fff;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    #controls button:hover:not(:disabled) {
-      background: #1565c0;
-    }
-    #controls button:disabled {
-      background: #90caf9;
-      cursor: default;
-    }
-    #controls span#instructions {
-      flex: 1 1 100%;
-      text-align: center;
-      font-size: 0.9em;
-      color: #1e88e5;
-      text-decoration: underline;
-      cursor: pointer;
-      margin-top: 4px;
-    }
-
-    /* Status */
-    #status {
-      text-align: center;
-      font-size: 0.9em;
-      color: #555;
-    }
-    #status span {
-      display: inline-block;
-      margin: 4px 8px;
-    }
-  </style>
+        .tile {
+            width: 80px;
+            height: 80px;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
-
-  <div class="card">
-    <h1>8-Puzzle Solver</h1>
-    <div id="grid"></div>
-    <div id="controls">
-      <button id="shuffle">Shuffle</button>
-      <button id="solve-bfs">Solve BFS</button>
-      <button id="solve-astar">Solve A*</button>
-      <button id="play-yourself">Solve Yourself</button>
-      <button id="new-game">New Game</button>
-      <button id="show-moves">Show Moves</button>
-      <span id="instructions">Instructions</span>
-    </div>
-    <div id="status">
-      <span id="move-count">Move Count: 0</span>
-      <span id="nodes-expanded">Nodes Expanded: 0</span>
-    </div>
-  </div>
-
-  <!-- load your existing solver logic -->
-  <py-script src="Tiles.py"></py-script>
-
-  <!-- PyScript UI glue (with improved instructions) -->
-  <py-script>
-from Tiles import Tiles
-from pyscript import Element
-from js import prompt, alert, setTimeout
-import random
-
-state = []
-initial_state = []
-tiles = None
-move_history = []
-nodes_expanded = 0
-
-def get_user_input():
-    inp = prompt("Enter 9 space-separated numbers (0-8) or 'random':")
-    if inp is None:
-        return False
-    if inp.strip().lower() == "random":
-        arr = list(range(9))
-        random.shuffle(arr)
-    else:
-        try:
-            arr = list(map(int, inp.split()))
-            if len(arr) != 9 or sorted(arr) != list(range(9)):
-                raise ValueError
-        except:
-            alert("Invalid input. Try again.")
-            return get_user_input()
-    global state, initial_state, tiles, move_history, nodes_expanded
-    state = arr[:]
-    initial_state = arr[:]
-    tiles = Tiles(state)
-    move_history.clear()
-    nodes_expanded = 0
-    update_status()
-    return True
-
-def render():
-    grid = Element("grid")
-    grid.element.innerHTML = ""
-    for i, v in enumerate(state):
-        d = Element().create("div")
-        d.element.className = "tile" + (" empty" if v == 0 else "")
-        d.element.textContent = "" if v == 0 else str(v)
-        if v != 0:
-            d.element.onclick = lambda e, i=i: move_tile(i)
-        grid.element.appendChild(d.element)
-
-def move_tile(i):
-    em = state.index(0)
-    if i in tiles.moves_states[em]:
-        state[em], state[i] = state[i], state[em]
-        move_history.append(state[i])
-        update_tiles()
-        render()
-        update_status()
-        if state == tiles.end_state:
-            alert("🎉 Puzzle Solved!")
-
-def update_tiles():
-    global tiles
-    tiles = Tiles(state)
-
-def update_status():
-    Element("move-count").element.textContent = f"Move Count: {len(move_history)}"
-    Element("nodes-expanded").element.textContent = f"Nodes Expanded: {nodes_expanded}"
-
-def shuffle_board(e=None):
-    global tiles, nodes_expanded
-    for _ in range(50):
-        em = state.index(0)
-        c = [j for j in (em-3, em+3, em-1, em+1)
-             if 0 <= j < 9 and not (em%3 == 0 and j == em-1) and not (em%3 == 2 and j == em+1)]
-        s = random.choice(c)
-        state[em], state[s] = state[s], state[em]
-    tiles = Tiles(state)
-    move_history.clear()
-    nodes_expanded = 0
-    render()
-    update_status()
-
-def solve(algo):
-    global nodes_expanded, move_history
-    state[:] = initial_state[:]
-    move_history.clear()
-    update_tiles()
-    render()
-    nodes_expanded, path = algo()
-    if nodes_expanded == -1:
-        alert("No solution.")
-        update_status()
-        return
-    def step(i=0):
-        if i >= len(path):
-            update_status()
-            return
-        mv = path[i]
-        em = state.index(0)
-        delta = {"Up": 3, "Down": -3, "Left": 1, "Right": -1}[mv]
-        state[em], state[em+delta] = state[em+delta], state[em]
-        move_history.append(state[em])
-        update_tiles()
-        render()
-        update_status()
-        setTimeout(lambda: step(i+1), 300)
-    step()
-
-def show_moves(e=None):
-    seq = " -> ".join(map(str, move_history)) or "None"
-    alert(f"Nodes Expanded: {nodes_expanded}\nMoves: {seq}")
-
-def play_yourself(e=None):
-    state[:] = initial_state[:]
-    move_history.clear()
-    global nodes_expanded
-    nodes_expanded = 0
-    update_tiles()
-    render()
-    update_status()
-
-def show_instructions(e=None):
-    alert(
-        "How to Play:\n"
-        "- Arrange the tiles so that the empty space (0) is in the top-left, and the numbers read left-to-right, row by row:\n"
-        "    0 1 2\n"
-        "    3 4 5\n"
-        "    6 7 8\n"
-        "- Click any tile adjacent to the empty space to slide it.\n"
-        "- “Shuffle” scrambles the board into a random, solvable state.\n"
-        "- “Solve BFS” and “Solve A*” will animate the chosen algorithm solving from your current layout.\n"
-        "- If you click a Solve button again after it finishes, it will reset to your original start state and run the solver again.\n"
-        "- “Solve Yourself” resets the board back to your last input so you can practice manually.\n"
-        "- “New Game” opens the input prompt for a fresh custom or random puzzle.\n"
-        "- “Show Moves” pops up the full sequence of tile values moved, and shows how many nodes the algorithm expanded.\n"
-    )
-
-if get_user_input():
-    render()
-
-# button wiring
-Element("shuffle").element.onclick = shuffle_board
-Element("solve-bfs").element.onclick = lambda e: solve(tiles.bfs)
-Element("solve-astar").element.onclick = lambda e: solve(tiles.a_star)
-Element("play-yourself").element.onclick = play_yourself
-Element("new-game").element.onclick = lambda e: (get_user_input() and render())
-Element("show-moves").element.onclick = show_moves
-Element("instructions").element.onclick = show_instructions
-  </py-script>
-</body>
-</html>
+    <div class="containe
