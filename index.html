@@ -1,175 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>8 Puzzle Solver</title>
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
+  <meta charset="UTF-8" />
+  <title>8 Puzzle Solver</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
 
-        #board {
-            display: grid;
-            grid-template-columns: repeat(3, 100px);
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
 
-        .tile {
-            width: 100px;
-            height: 100px;
-            background-color: #e0e0e0;
-            font-size: 32px;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            border-radius: 10px;
-        }
+    .tile {
+      width: 100px;
+      height: 100px;
+      background-color: #e0e0e0;
+      font-size: 32px;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      border-radius: 10px;
+    }
 
-        .tile.empty {
-            background-color: #ffffff;
-        }
+    .tile.empty {
+      background-color: #ffffff;
+    }
 
-        button {
-            margin: 5px;
-            padding: 10px 20px;
-            font-size: 16px;
-        }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
 
-        #move-count {
-            font-size: 18px;
-        }
-    </style>
+    #move-count {
+      font-size: 18px;
+    }
+  </style>
 </head>
 <body>
-    <h1>8 Puzzle Solver</h1>
-    <div id="board"></div>
-    <div>
-        <button py-click="solve_bfs()">Solve with BFS</button>
-        <button py-click="solve_astar()">Solve with A*</button>
-        <button py-click="reset_game()">Solve by Yourself</button>
-        <button py-click="new_game()">New Game</button>
-        <button py-click="show_moves_popup()">Show Moves</button>
-    </div>
-    <p id="move-count">Move Count: 0</p>
+  <h1>8 Puzzle Solver</h1>
+  <div id="board"></div>
+  <div>
+    <button onclick="solve('bfs')">Solve with BFS</button>
+    <button onclick="solve('astar')">Solve with A*</button>
+    <button onclick="resetGame()">Solve by Yourself</button>
+    <button onclick="newGame()">New Game</button>
+    <button onclick="showMoves()">Show Moves</button>
+  </div>
+  <p id="move-count">Move Count: 0</p>
 
-    <py-env>
-        - tiles
-    </py-env>
+  <script src="tiles.js"></script>
+  <script>
+    let boardEl = document.getElementById("board");
+    let moveCountEl = document.getElementById("move-count");
+    let state = shuffle([...Array(9).keys()]);
+    let initialState = [...state];
+    let puzzle = new Tiles(state);
+    let moveHistory = [];
 
-    <py-script>
-import random
-from js import document, alert, prompt
-from pyodide.ffi import create_proxy
-from tiles import Tiles
-from collections import deque
-import heapq
+    function renderBoard() {
+      boardEl.innerHTML = "";
+      for (let i = 0; i < 9; i++) {
+        let div = document.createElement("div");
+        div.className = "tile";
+        if (state[i] === 0) {
+          div.classList.add("empty");
+        } else {
+          div.innerText = state[i];
+          div.onclick = () => moveTile(i);
+        }
+        boardEl.appendChild(div);
+      }
+      moveCountEl.innerText = `Move Count: ${moveHistory.length}`;
+    }
 
-# --- Game State ---
-state = list(range(9))
-random.shuffle(state)
-tiles = Tiles(state)
-move_history = []
-initial_state = state[:]
+    function moveTile(index) {
+      let empty = state.indexOf(0);
+      if (puzzle.movesStates[empty].includes(index)) {
+        [state[empty], state[index]] = [state[index], state[empty]];
+        moveHistory.push(state[empty]);
+        renderBoard();
+        if (state.join() === puzzle.endState.join()) {
+          alert("Puzzle Solved!");
+        }
+      }
+    }
 
-# --- GUI Rendering ---
-def render_board():
-    board = document.getElementById("board")
-    board.innerHTML = ""
-    for i in range(9):
-        div = document.createElement("div")
-        div.classList.add("tile")
-        if state[i] == 0:
-            div.classList.add("empty")
-            div.innerText = ""
-        else:
-            div.innerText = str(state[i])
-            div.addEventListener("click", create_proxy(lambda e, idx=i: move_tile(idx)))
-        board.appendChild(div)
-    update_move_display()
+    function resetGame() {
+      state = [...initialState];
+      puzzle = new Tiles(state);
+      moveHistory = [];
+      renderBoard();
+    }
 
-# --- Tile Movement ---
-def move_tile(index):
-    empty_index = state.index(0)
-    if index in tiles.moves_states[empty_index]:
-        state[empty_index], state[index] = state[index], state[empty_index]
-        move_history.append(state[empty_index])
-        render_board()
-        if tuple(state) == tiles.end_state:
-            alert("Puzzle Solved!")
+    function newGame() {
+      const input = prompt("Enter 9 space-separated numbers (0-8) or 'random':");
+      if (!input) return;
+      if (input.toLowerCase() === "random") {
+        state = shuffle([...Array(9).keys()]);
+      } else {
+        const userInput = input.split(" ").map(Number);
+        if (
+          userInput.length !== 9 ||
+          new Set(userInput).size !== 9 ||
+          userInput.some((n) => n < 0 || n > 8)
+        ) {
+          alert("Invalid input. Try again.");
+          return newGame();
+        }
+        state = userInput;
+      }
+      initialState = [...state];
+      puzzle = new Tiles(state);
+      moveHistory = [];
+      renderBoard();
+    }
 
-# --- Buttons ---
-def update_move_display():
-    document.getElementById("move-count").innerText = f"Move Count: {len(move_history)}"
+    function showMoves() {
+      if (moveHistory.length) {
+        alert("Moves: " + moveHistory.join(" -> "));
+      } else {
+        alert("No moves made yet.");
+      }
+    }
 
-def solve_bfs():
-    reset_game()
-    nodes, path = tiles.bfs()
-    if nodes == -1:
-        alert("No solution found")
-        return
-    animate_solution(path)
+    function solve(method) {
+      resetGame();
+      let result = method === 'bfs' ? puzzle.bfs() : puzzle.aStar();
+      if (!result || result.nodesExpanded === -1) {
+        alert("No solution found");
+        return;
+      }
+      animateMoves(result.path);
+    }
 
-def solve_astar():
-    reset_game()
-    nodes, path = tiles.a_star()
-    if nodes == -1:
-        alert("No solution found")
-        return
-    animate_solution(path)
+    function animateMoves(moves) {
+      let i = 0;
+      let interval = setInterval(() => {
+        if (i >= moves.length) return clearInterval(interval);
+        let idx = state.indexOf(moves[i]);
+        moveTile(idx);
+        i++;
+      }, 500);
+    }
 
-def animate_solution(path):
-    from asyncio import sleep
-    async def animate():
-        for move in path:
-            await sleep(0.5)
-            move_tile(state.index(move))
-    animate()
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
 
-def reset_game():
-    global state, tiles, move_history
-    state = initial_state[:]
-    tiles = Tiles(state)
-    move_history = []
-    render_board()
-
-def new_game():
-    global state, tiles, move_history, initial_state
-    user_input = prompt("Enter 9 space-separated numbers (0-8) or type 'random':")
-    if user_input is None:
-        return
-    if user_input.lower() == "random":
-        state = list(range(9))
-        random.shuffle(state)
-    else:
-        try:
-            user_list = list(map(int, user_input.split()))
-            if len(user_list) != 9 or sorted(user_list) != list(range(9)):
-                raise ValueError
-            state = user_list
-        except:
-            alert("Invalid input. Try again.")
-            return new_game()
-    tiles = Tiles(state)
-    move_history = []
-    initial_state = state[:]
-    render_board()
-
-def show_moves_popup():
-    if move_history:
-        alert("Moves: " + " -> ".join(map(str, move_history)))
-    else:
-        alert("No moves made yet.")
-
-render_board()
-    </py-script>
+    renderBoard();
+  </script>
 </body>
 </html>
