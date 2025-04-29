@@ -81,8 +81,8 @@ class PuzzleGUI:
             "- You can move tiles by clicking on a tile adjacent to the empty space.\n"
             "- The game ends when the board matches (zero is the empty tile): \n"
             "  0 1 2 \n  3 4 5 \n  6 7 8 \n"
-            "- Use the Solve buttons to see solutions or try solving it yourself!\n
-                By pressing on Solve With after the puzzle is solved,it will return to the inital state and resolve it again.\n"
+            "- Use the Solve buttons to see solutions or try solving it yourself!\n"
+            "- By pressing on Solve With after the puzzle is solved,it will return to the inital state and resolve it again.\n"
             "- On the Show Moves button you will see the path from the initial state"
             "  to the goal state.the nodes expanded will point on how many node were"
             "  expanded by the algorithm during the process."
