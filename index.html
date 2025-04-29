@@ -146,7 +146,7 @@
   <!-- load your existing solver logic -->
   <py-script src="Tiles.py"></py-script>
 
-  <!-- PyScript UI glue (unchanged logic) -->
+  <!-- PyScript UI glue (with improved instructions) -->
   <py-script>
 from Tiles import Tiles
 from pyscript import Element
@@ -162,102 +162,103 @@ nodes_expanded = 0
 def get_user_input():
     inp = prompt("Enter 9 space-separated numbers (0-8) or 'random':")
     if inp is None: return False
-    if inp.strip().lower()=="random":
+    if inp.strip().lower() == "random":
         arr = list(range(9)); random.shuffle(arr)
     else:
         try:
             arr = list(map(int, inp.split()))
-            if len(arr)!=9 or sorted(arr)!=list(range(9)): raise
+            if len(arr) != 9 or sorted(arr) != list(range(9)): raise
         except:
             alert("Invalid input. Try again.")
             return get_user_input()
     global state, initial_state, tiles, move_history, nodes_expanded
     state = arr[:]; initial_state = arr[:]
     tiles = Tiles(state)
-    move_history.clear(); nodes_expanded=0
+    move_history.clear(); nodes_expanded = 0
     update_status(); return True
 
 def render():
     grid = Element("grid")
     grid.element.innerHTML = ""
-    for i,v in enumerate(state):
+    for i, v in enumerate(state):
         d = Element().create("div")
-        d.element.className = "tile"+(" empty" if v==0 else "")
-        d.element.textContent = "" if v==0 else str(v)
-        if v!=0: d.element.onclick=lambda e,i=i: move_tile(i)
+        d.element.className = "tile" + (" empty" if v == 0 else "")
+        d.element.textContent = "" if v == 0 else str(v)
+        if v != 0: d.element.onclick = lambda e, i=i: move_tile(i)
         grid.element.appendChild(d.element)
 
 def move_tile(i):
     em = state.index(0)
     if i in tiles.moves_states[em]:
-        state[em],state[i] = state[i],state[em]
+        state[em], state[i] = state[i], state[em]
         move_history.append(state[i])
         update_tiles(); render(); update_status()
-        if state==tiles.end_state: alert("🎉 Solved!")
+        if state == tiles.end_state: alert("🎉 Puzzle Solved!")
 
 def update_tiles():
-    global tiles; tiles=Tiles(state)
+    global tiles; tiles = Tiles(state)
 
 def update_status():
     Element("move-count").element.textContent = f"Move Count: {len(move_history)}"
     Element("nodes-expanded").element.textContent = f"Nodes Expanded: {nodes_expanded}"
 
 def shuffle_board(e=None):
-    global tiles,nodes_expanded
+    global tiles, nodes_expanded
     for _ in range(50):
-        em=state.index(0)
-        c=[j for j in (em-3,em+3,em-1,em+1)
-           if 0<=j<9 and not(em%3==0 and j==em-1) and not(em%3==2 and j==em+1)]
-        s=random.choice(c); state[em],state[s]=state[s],state[em]
-    tiles=Tiles(state); move_history.clear(); nodes_expanded=0
+        em = state.index(0)
+        c = [j for j in (em-3, em+3, em-1, em+1)
+             if 0 <= j < 9 and not (em%3 == 0 and j == em-1) and not (em%3 == 2 and j == em+1)]
+        s = random.choice(c); state[em], state[s] = state[s], state[em]
+    tiles = Tiles(state); move_history.clear(); nodes_expanded = 0
     render(); update_status()
 
 def solve(algo):
-    global nodes_expanded,move_history
+    global nodes_expanded, move_history
     state[:] = initial_state[:]; move_history.clear()
     update_tiles(); render()
-    nodes_expanded,path = algo()
-    if nodes_expanded==-1:
+    nodes_expanded, path = algo()
+    if nodes_expanded == -1:
         alert("No solution.")
         update_status(); return
     def step(i=0):
-        if i>=len(path):
+        if i >= len(path):
             update_status(); return
-        mv=path[i]; em=state.index(0)
-        delta={"Up":3,"Down":-3,"Left":1,"Right":-1}[mv]
-        state[em],state[em+delta]=state[em+delta],state[em]
+        mv = path[i]; em = state.index(0)
+        delta = {"Up": 3, "Down": -3, "Left": 1, "Right": -1}[mv]
+        state[em], state[em+delta] = state[em+delta], state[em]
         move_history.append(state[em]); update_tiles(); render(); update_status()
         setTimeout(lambda: step(i+1), 300)
     step()
 
 def show_moves(e=None):
-    seq=" -> ".join(map(str,move_history)) or "None"
+    seq = " -> ".join(map(str, move_history)) or "None"
     alert(f"Nodes Expanded: {nodes_expanded}\nMoves: {seq}")
 
 def play_yourself(e=None):
-    state[:] = initial_state[:]; move_history.clear(); 
-    global nodes_expanded; nodes_expanded=0
+    state[:] = initial_state[:]; move_history.clear();
+    global nodes_expanded; nodes_expanded = 0
     update_tiles(); render(); update_status()
 
 def show_instructions(e=None):
     alert(
-      "How to Play:\n"
-      "- Goal: order tiles 0–8 (0 is empty) in:\n"
-      "    0 1 2\n    3 4 5\n    6 7 8\n"
-      "- Click an adjacent tile to move.\n"
-      "- Buttons:\n"
-      "  • Shuffle → randomize\n"
-      "  • Solve BFS/A* → auto-solve\n"
-      "  • Solve Yourself → reset to start\n"
-      "  • New Game → pick new layout\n"
-      "  • Show Moves → path & nodes\n"
+        "How to Play:\n"
+        "- Arrange the tiles so that the empty space (0) is in the top-left, and the numbers read left-to-right, row by row:\n"
+        "    0 1 2\n"
+        "    3 4 5\n"
+        "    6 7 8\n"
+        "- Click any tile adjacent to the empty space to slide it.\n"
+        "- “Shuffle” scrambles the board into a random, solvable state.\n"
+        "- “Solve BFS” and “Solve A*” will animate the chosen algorithm solving from your current layout.\n"
+        "- If you click a Solve button again after it finishes, it will reset to your original start state and run the solver again.\n"
+        "- “Solve Yourself” resets the board back to your last input so you can practice manually.\n"
+        "- “New Game” opens the input prompt for a fresh custom or random puzzle.\n"
+        "- “Show Moves” pops up the full sequence of tile values moved, and shows how many nodes the algorithm expanded.\n"
     )
 
 if get_user_input():
     render()
 
 # button wiring
-Element("shuffle").element.onclick      = shuffle_board
 Element("solve-bfs").element.onclick    = lambda e: solve(tiles.bfs)
 Element("solve-astar").element.onclick  = lambda e: solve(tiles.a_star)
 Element("play-yourself").element.onclick= play_yourself
